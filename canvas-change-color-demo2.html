@@ -68,7 +68,7 @@
 				//判断该坐标是否无需变色
 				function stopChange(x, y, imgData) {
 					const rgba = getColor(x, y, imgData.data);
-					if (getDiff(rgba, clickRgba) >= 100) {
+					if (getDiff(rgba, clickRgba) >= 150) {
 						//色值差距过大
 						return true;
 					}
@@ -81,7 +81,6 @@
 						return true;
 					}
 				}
-
 				function hasChange(x, y) {
 					const pointKey = `${x}-${y}`;
 					return pointMark[pointKey];
@@ -91,50 +90,45 @@
 					pointMark[pointKey] = true;
 				}
 
-				function updateWaitPoint(x, y, waitPoint, deletePoint) {
+				function updateWaitPoint(x, y) {
 					if (y > 0) {
-						addWaitPoint(`${x}-${y - 1}`, waitPoint, deletePoint);
+						addWaitPoint(`${x}-${y - 1}`);
 					}
 					if (y < cvs.height - 1) {
-						addWaitPoint(`${x}-${y + 1}`, waitPoint, deletePoint);
+						addWaitPoint(`${x}-${y + 1}`);
 					}
 					if (x > 0) {
-						addWaitPoint(`${x - 1}-${y}`, waitPoint, deletePoint);
+						addWaitPoint(`${x - 1}-${y}`);
 					}
 					if (x < cvs.width - 1) {
-						addWaitPoint(`${x + 1}-${y}`, waitPoint, deletePoint);
+						addWaitPoint(`${x + 1}-${y}`);
 					}
 				}
-
-				function addWaitPoint(key, waitPoint, deletePoint) {
-					if (!deletePoint[key]) {
-						waitPoint[key] = true;
-					}
+				function addWaitPoint(key) {
+					waitPoint[key] = true;
 				}
-				function deleteWaitPoint(key, waitPoint, deletePoint) {
+				function deleteWaitPoint(key) {
 					delete waitPoint[key];
-					deletePoint[key] = true;
 				}
-
+				//本轮等待变色的点
 				const waitPoint = {
 					[`${x}-${y}`]: true,
 				};
-				const deletePoint = {};
 				while (Object.keys(waitPoint).length) {
 					const pointList = Object.keys(waitPoint);
-					for (let index = 0; index < pointList.length; index++) {
-						const key = pointList[index];
+					for (let i = 0; i < pointList.length; i++) {
+						const key = pointList[i];
 						const list = key.split('-');
-						const nx = +list[0];
-						const ny = +list[1];
+						const x1 = +list[0];
+						const y1 = +list[1];
 
-						if (stopChange(nx, ny, imgData)) {
-							deleteWaitPoint(key, waitPoint, deletePoint);
+						if (stopChange(x1, y1, imgData)) {
+							deleteWaitPoint(key);
 							continue;
 						}
-						changeColor(nx, ny, imgData);
-						deleteWaitPoint(key, waitPoint, deletePoint);
-						updateWaitPoint(nx, ny, waitPoint, deletePoint);
+						changeColor(x1, y1, imgData);
+						deleteWaitPoint(key);
+						updateWaitPoint(x1, y1);
 					}
 				}
 			}
