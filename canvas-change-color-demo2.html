@@ -89,8 +89,8 @@
 					const pointKey = `${x}-${y}`;
 					pointMark[pointKey] = true;
 				}
-
-				function updateWaitPoint(x, y) {
+				//添加上下左右方向的点到等待变色的点数组
+				function addSurroundingPoint(x, y) {
 					if (y > 0) {
 						addWaitPoint(`${x}-${y - 1}`);
 					}
@@ -110,7 +110,7 @@
 				function deleteWaitPoint(key) {
 					delete waitPoint[key];
 				}
-				//本轮等待变色的点
+				//本轮等待变色的点数组
 				const waitPoint = {
 					[`${x}-${y}`]: true,
 				};
@@ -128,7 +128,7 @@
 						}
 						changeColor(x1, y1, imgData);
 						deleteWaitPoint(key);
-						updateWaitPoint(x1, y1);
+						addSurroundingPoint(x1, y1);
 					}
 				}
 			}
