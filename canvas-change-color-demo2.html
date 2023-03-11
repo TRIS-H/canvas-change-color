@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<style>
+			.color-box {
+				margin-bottom: 20px;
+			}
+			.canvas-box {
+				text-align: center;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="color-box">设置色值： <input type="color" /></div>
+		<div class="canvas-box">
+			<canvas></canvas>
+		</div>
+		<script>
+			let color = '#00ff00';
+			let colorRgba = getRGBAColor();
+			//hex转rgba数组
+			function getRGBAColor() {
+				const rgb = [color.slice(1, 3), color.slice(3, 5), color.slice(5)].map((item) =>
+					parseInt(item, 16)
+				);
+				return [...rgb, 255];
+			}
+
+			const input = document.querySelector('input[type=color]');
+			input.value = color;
+			input.addEventListener('change', function (e) {
+				color = e.target.value;
+				colorRgba = getRGBAColor();
+			});
+
+			const cvs = document.querySelector('canvas');
+			const ctx = cvs.getContext('2d', {
+				willReadFrequently: true,
+			});
+			cvs.addEventListener('click', clickCb);
+
+			const img = new Image();
+			img.src = './img/cxk.png';
+			img.onload = () => {
+				cvs.width = 240;
+				cvs.height = (cvs.width * img.height) / img.width;
+				//图片缩放
+				ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, cvs.width, cvs.height);
+			};
+
+			function clickCb(e) {
+				let x = e.offsetX;
+				let y = e.offsetY;
+				const pointMark = {};
+
+				const imgData = ctx.getImageData(0, 0, cvs.width, cvs.height);
+				const clickRgba = getColor(x, y, imgData.data);
+				//坐标变色
+				function changeColor(x, y, imgData) {
+					imgData.data.set(colorRgba, getIndex(x, y));
+					ctx.putImageData(imgData, 0, 0);
+					markChange(x, y);
+				}
+
+				//判断该坐标是否无需变色
+				function stopChange(x, y, imgData) {
+					const rgba = getColor(x, y, imgData.data);
+					if (getDiff(rgba, clickRgba) >= 100) {
+						//色值差距过大
+						return true;
+					}
+					if (getDiff(rgba, colorRgba) === 0) {
+						//同颜色，不用改
+						return true;
+					}
+					if (hasChange(x, y)) {
+						//已变色
+						return true;
+					}
+				}
+
+				function hasChange(x, y) {
+					const pointKey = `${x}-${y}`;
+					return pointMark[pointKey];
+				}
+				function markChange(x, y) {
+					const pointKey = `${x}-${y}`;
+					pointMark[pointKey] = true;
+				}
+
+				function updateWaitPoint(x, y, waitPoint, deletePoint) {
+					if (y > 0) {
+						addWaitPoint(`${x}-${y - 1}`, waitPoint, deletePoint);
+					}
+					if (y < cvs.height - 1) {
+						addWaitPoint(`${x}-${y + 1}`, waitPoint, deletePoint);
+					}
+					if (x > 0) {
+						addWaitPoint(`${x - 1}-${y}`, waitPoint, deletePoint);
+					}
+					if (x < cvs.width - 1) {
+						addWaitPoint(`${x + 1}-${y}`, waitPoint, deletePoint);
+					}
+				}
+
+				function addWaitPoint(key, waitPoint, deletePoint) {
+					if (!deletePoint[key]) {
+						waitPoint[key] = true;
+					}
+				}
+				function deleteWaitPoint(key, waitPoint, deletePoint) {
+					delete waitPoint[key];
+					deletePoint[key] = true;
+				}
+
+				const waitPoint = {
+					[`${x}-${y}`]: true,
+				};
+				const deletePoint = {};
+				while (Object.keys(waitPoint).length) {
+					const pointList = Object.keys(waitPoint);
+					for (let index = 0; index < pointList.length; index++) {
+						const key = pointList[index];
+						const list = key.split('-');
+						const nx = +list[0];
+						const ny = +list[1];
+
+						if (stopChange(nx, ny, imgData)) {
+							deleteWaitPoint(key, waitPoint, deletePoint);
+							continue;
+						}
+						changeColor(nx, ny, imgData);
+						deleteWaitPoint(key, waitPoint, deletePoint);
+						updateWaitPoint(nx, ny, waitPoint, deletePoint);
+					}
+				}
+			}
+
+			//通过坐标x，y获取对应imgData数组的索引
+			function getIndex(x, y) {
+				return (y * cvs.width + x) * 4;
+			}
+
+			//通过坐标获取rgba数组
+			function getColor(x, y, data) {
+				const i = getIndex(x, y);
+				return [data[i], data[i + 1], data[i + 2], data[i + 3]];
+			}
+
+			////简单地根据绝对值之和判断是否为同颜色区域
+			function getDiff(rgba1, rgba2) {
+				return (
+					Math.abs(rgba2[0] - rgba1[0]) +
+					Math.abs(rgba2[1] - rgba1[1]) +
+					Math.abs(rgba2[2] - rgba1[2]) +
+					Math.abs(rgba2[3] - rgba1[3])
+				);
+			}
+		</script>
+	</body>
+</html>

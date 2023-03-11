@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+		<style>
+			.canvas-box {
+				text-align: center;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="canvas-box">
+			<canvas></canvas>
+		</div>
+		<script>
+			const cvs = document.querySelector('canvas');
+			const ctx = cvs.getContext('2d', {
+				willReadFrequently: true,
+			});
+			//加载图片并绘制
+			const img = new Image();
+			img.src = './img/cxk.png';
+			img.onload = () => {
+				//为防止图片尺寸过大，这里处理了缩放
+				cvs.width = 240;
+				cvs.height = (cvs.width * img.height) / img.width;
+				ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, cvs.width, cvs.height);
+			};
+
+			//监听canvas点击
+			cvs.addEventListener('click', clickCb);
+
+			function clickCb(e) {
+				const x = e.offsetX;
+				const y = e.offsetY;
+				const imgData = ctx.getImageData(0, 0, cvs.width, cvs.height);
+				//获取点击坐标的rgba信息
+				const clickRgba = getColor(x, y, imgData.data);
+
+				//坐标变色
+				function changeColor(x, y, imgData) {
+					if (stopChange(x, y, imgData)) {
+						return;
+					}
+					imgData.data.set(changeRgba, getIndex(x, y));
+					ctx.putImageData(imgData, 0, 0);
+					//递归变色
+					changeColor(x - 1, y, imgData);
+					changeColor(x + 1, y, imgData);
+					changeColor(x, y + 1, imgData);
+					changeColor(x, y - 1, imgData);
+				}
+
+				//判断该坐标是否无需变色
+				function stopChange(x, y, imgData) {
+					if (x < 0 || y < 0 || x > cvs.width || y > cvs.height) {
+						//超出canvas边界
+						return true;
+					}
+					const rgba = getColor(x, y, imgData.data);
+					if (getDiff(rgba, clickRgba) >= 100) {
+						//色值差距过大
+						return true;
+					}
+					if (getDiff(rgba, changeRgba) === 0) {
+						//同颜色，不用改
+						return true;
+					}
+				}
+				changeColor(x, y, imgData);
+			}
+
+			//通过坐标获取rgba数组
+			function getColor(x, y, data) {
+				const i = getIndex(x, y);
+				return [data[i], data[i + 1], data[i + 2], data[i + 3]];
+			}
+
+			//通过坐标x，y获取对应imgData数组的索引
+			function getIndex(x, y) {
+				return (y * cvs.width + x) * 4;
+			}
+
+			//为了方便，这里将变色值写死为原谅绿
+			const changeRgba = [0, 255, 0, 255];
+
+			//简单地根据绝对值之和判断是否为同颜色区域
+			function getDiff(rgba1, rgba2) {
+				return (
+					Math.abs(rgba2[0] - rgba1[0]) +
+					Math.abs(rgba2[1] - rgba1[1]) +
+					Math.abs(rgba2[2] - rgba1[2]) +
+					Math.abs(rgba2[3] - rgba1[3])
+				);
+			}
+		</script>
+	</body>
+</html>
